@@ -345,6 +345,7 @@ class ClientIO extends ClientBase with ClientMixin {
       options: const FlutterWebAuth2Options(preferEphemeral: true),
     );
 
+  
     final uri = Uri.parse(result);
     final key = uri.queryParameters['key'];
     final secret = uri.queryParameters['secret'];
