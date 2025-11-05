@@ -46,10 +46,9 @@ class ClientIO extends ClientBase with ClientMixin {
     String endPoint = 'https://cloud.appwrite.io/v1',
     this.selfSigned = false,
   }) : _endPoint = endPoint {
-    _nativeClient =
-        HttpClient()
-          ..badCertificateCallback =
-              ((X509Certificate cert, String host, int port) => selfSigned);
+    _nativeClient = HttpClient()
+      ..badCertificateCallback =
+          ((X509Certificate cert, String host, int port) => selfSigned);
     _httpClient = IOClient(_nativeClient);
     _endPointRealtime = endPoint
         .replaceFirst('https://', 'wss://')
@@ -337,32 +336,33 @@ class ClientIO extends ClientBase with ClientMixin {
   bool get _customSchemeAllowed => Platform.isWindows || Platform.isLinux;
 
   @override
-  Future webAuth(Uri url, {String? callbackUrlScheme}) {
-    return FlutterWebAuth2.authenticate(
+  Future webAuth(Uri url, {String? callbackUrlScheme}) async {
+    final result = await FlutterWebAuth2.authenticate(
       url: url.toString(),
-      callbackUrlScheme:
-          callbackUrlScheme != null && _customSchemeAllowed
-              ? callbackUrlScheme
-              : "appwrite-callback-" + config['project']!,
-      options: const FlutterWebAuth2Options(intentFlags: ephemeralIntentFlags),
-    ).then((value) async {
-      Uri url = Uri.parse(value);
-      final key = url.queryParameters['key'];
-      final secret = url.queryParameters['secret'];
-      if (key == null || secret == null) {
-        throw AppwriteException(
-          "Invalid OAuth2 Response. Key and Secret not available.",
-          500,
-        );
-      }
-      Cookie cookie = Cookie(key, secret);
-      cookie.domain = Uri.parse(_endPoint).host;
-      cookie.httpOnly = true;
-      cookie.path = '/';
-      List<Cookie> cookies = [cookie];
-      await init();
-      _cookieJar.saveFromResponse(Uri.parse(_endPoint), cookies);
-    });
+      callbackUrlScheme: (callbackUrlScheme != null && _customSchemeAllowed)
+          ? callbackUrlScheme
+          : "appwrite-callback-${config['project']!}",
+      options: const FlutterWebAuth2Options(preferEphemeral: true),
+    );
+
+    final uri = Uri.parse(result);
+    final key = uri.queryParameters['key'];
+    final secret = uri.queryParameters['secret'];
+
+    if (key == null || secret == null) {
+      throw AppwriteException(
+        "Invalid OAuth2 Response. Key and Secret not available.",
+        500,
+      );
+    }
+
+    final cookie = Cookie(key, secret)
+      ..domain = Uri.parse(_endPoint).host
+      ..httpOnly = true
+      ..path = '/';
+
+    await init();
+    _cookieJar.saveFromResponse(Uri.parse(_endPoint), [cookie]);
   }
 
   @override
